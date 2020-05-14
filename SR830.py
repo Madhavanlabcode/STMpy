@@ -7,6 +7,8 @@ ser.close()
 print('├── STMpy.SR830: cmdser, setVol,readSens,')
 print('initialize with    ser = serial.Serial("COM4", 9600, timeout=1)')
 print('read data with     ser.read(100) # read up to one hundred bytes ')
+print('openGui(ser)')
+print('need to install ipywidgets')
 
 def setVol(ser,n):
     """
@@ -61,4 +63,15 @@ i sensitivity   i sensitivity
     ser.write(str.encode('SENS?\n'))
     s = ser.read(256);
     print(s)
+
+from __future__ import print_function
+from ipywidgets import interact, interactive, fixed, interact_manual
+import ipywidgets as widgets
+
+def openGui(userSer):
+"""
+input: ser
+note: to creat a ser, use   ser = serial.Serial("COM4", 9600, timeout=1)   first
+"""
+    interact(setVol,ser=fixed(userSer),n=0)
 
