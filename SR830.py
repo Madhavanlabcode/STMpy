@@ -1,12 +1,15 @@
+from __future__ import print_function
+from ipywidgets import interact, interactive, fixed, interact_manual
+import ipywidgets as widgets
+
 import os.path
 import sys
 import array
 import time
 import serial
-ser.close()
-print('├── STMpy.SR830: cmdser, setVol,readSens,')
-print('initialize with    ser = serial.Serial("COM4", 9600, timeout=1)')
-print('read data with     ser.read(100) # read up to one hundred bytes ')
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 def setVol(ser,n):
     """
@@ -14,24 +17,25 @@ def setVol(ser,n):
         n:the modulation voltage in Volte
     output: 
         the modulation voltage after re-setting
-    set the modulation voltage to n
-    """    
+    set the modulation voltage to n and return voltage at present
+    """
     st='SLVL'+str(n)+'\n'
     ser.write(str.encode(st))
     ser.write(str.encode('SLVL?\n'))#return the modulation voltage after re-setting
     s = ser.read(256);
-    print(s)
-
+    return s
 
 def cmdser(ser,cmd):
     """
     input:
-        cmd: [string] command abbreviation
+        ser: your serial
+        cmd: strings of command
             '*IDN?'= Queries the device identification
             'OUTP?1' = Queries the value of X (CH1)
             for other command, refer: http://users.df.uba.ar/dgrosz/material%20adicional/manual%20lock-in%20SR830.pdf from page 85.
     output:
-        read data
+        natural return
+    giving command to SR830
     """
     print('Sending:', cmd)
     ser.write(str.encode(cmd+'\n'))#read output in channel 1
@@ -39,26 +43,65 @@ def cmdser(ser,cmd):
     if len(s) > 0:
         print(s)
 
-def readSens(ser):
-"""
-read sensitivity: the returned number corresponding to...
-i sensitivity   i sensitivity
-0 2 nV/fA       13 50 µV/pA
-1 5 nV/fA       14 100 µV/pA
-2 10 nV/fA      15 200 µV/pA
-3 20 nV/fA      16 500 µV/pA
-4 50 nV/fA      17 1 mV/nA
-5 100 nV/fA     18 2 mV/nA
-6 200 nV/fA     19 5 mV/nA
-7 500 nV/fA     20 10 mV/nA
-8 1 µV/pA       21 20 mV/nA
-9 2 µV/pA       22 50 mV/nA
-10 5 µV/pA      23 100 mV/nA
-11 10 µV/pA     24 200 mV/nA
-12 20 µV/pA     25 500 mV/nA
-26 1 V/µA
-"""
-    ser.write(str.encode('SENS?\n'))
-    s = ser.read(256);
-    print(s)
 
+def Volbar(s):
+    interact(setVol,s=fixed(ser),Vol=widgets.IntSlider(min=-30, max=30, step=1, value=0))
+
+def plotOut(ser,timeout=0.3):
+    o1=[]
+    o2=[]
+    while(True):
+        a1 = cmdser(ser,'OUTP?1')
+        a2 = cmdser(ser,'OUTP?2')
+        a1.decode();
+        a2.decode();
+        b1 = float(a1[0:4]);
+        b2 = float(a2[0:4]);
+        
+        o1.append(b1);
+        o2.append(b2);
+
+        # Limit o1 and o2 lists to 30 items
+        o1=o1[-30:]
+        o2=o2[-30:]
+        
+        plt.cla();
+        plt.plot(o1,lable='Out1');
+        plt.plot(o2,lable='Out2');
+        plt.legend()
+        time.sleep(timeout)
+        plt.show()
+
+def readOut1(ser,timeout=0.3):
+    while True:
+        a1 = cmdser(ser,'OUTP?1');
+        print("\r"+"Out1="+o1,end="");
+        time.sleep(timeout)
+
+def readOut2(ser,timeout=0.3):
+    while True:
+        a2 = cmdser(ser,'OUTP?2');
+        print("\r"+"Out2="+o1,end="");
+        time.sleep(timeout)
+
+
+from multiprocessing import Process
+
+def runInParallel(*fns):
+  proc = []
+  for fn in fns:
+    p = Process(target=fn)
+    p.start()
+    proc.append(p)
+  for p in proc:
+    p.join()
+
+def guiAll(Port,timeout=0.3):
+    """
+    input:
+        Port: string, Port number.
+    use ser.close() after calling this function
+    """
+    ser = serial.Serial(Port, 9600, timeout=1)
+    t = timeout;
+    runInParallel(Volbar(ser),readOut1(ser,t),readOut2(ser,t),plotOut(ser,t))
