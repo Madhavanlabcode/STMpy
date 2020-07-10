@@ -10,6 +10,13 @@ import serial
 
 import matplotlib.pyplot as plt
 import numpy as np
+=======
+ser.close()
+print('├── STMpy.SR830: cmdser, setVol,readSens,')
+print('initialize with    ser = serial.Serial("COM4", 9600, timeout=1)')
+print('read data with     ser.read(100) # read up to one hundred bytes ')
+print('openGui(ser)')
+print('need to install ipywidgets')
 
 def setVol(ser,n):
     """
@@ -42,6 +49,7 @@ def cmdser(ser,cmd):
     s = ser.read(256);
     if len(s) > 0:
         print(s)
+
 
 
 def Volbar(s):
@@ -105,3 +113,16 @@ def guiAll(Port,timeout=0.3):
     ser = serial.Serial(Port, 9600, timeout=1)
     t = timeout;
     runInParallel(Volbar(ser),readOut1(ser,t),readOut2(ser,t),plotOut(ser,t))
+=======
+from __future__ import print_function
+from ipywidgets import interact, interactive, fixed, interact_manual
+import ipywidgets as widgets
+
+def openGui(userSer):
+"""
+input: ser
+note: to creat a ser, use   ser = serial.Serial("COM4", 9600, timeout=1)   first
+"""
+    interact(setVol,ser=fixed(userSer),n=0)
+
+
